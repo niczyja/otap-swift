@@ -5,19 +5,24 @@ import PackageDescription
 
 let package = Package(
     name: "OpenTTDAdminPort",
+    platforms: [
+        .macOS("14.4"),
+        .iOS("17.4")
+    ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "OpenTTDAdminPort",
             targets: ["OpenTTDAdminPort"]),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "OpenTTDAdminPort"),
+            name: "OpenTTDAdminPort",
+            path: "Sources"
+        ),
         .testTarget(
             name: "OpenTTDAdminPortTests",
-            dependencies: ["OpenTTDAdminPort"]),
+            dependencies: ["OpenTTDAdminPort"],
+            path: "Tests"
+        ),
     ]
 )
