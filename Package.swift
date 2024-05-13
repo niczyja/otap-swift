@@ -4,24 +4,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "OpenTTDAdminPort",
+    name: "OTTDAdminKit",
     platforms: [
         .macOS("14.4"),
         .iOS("17.4")
     ],
     products: [
         .library(
-            name: "OpenTTDAdminPort",
-            targets: ["OpenTTDAdminPort"]),
+            name: "OTTDAdminKit",
+            targets: ["OTTDAdminKit"]),
     ],
     targets: [
         .target(
-            name: "OpenTTDAdminPort",
+            name: "OTTDAdminKit",
             path: "Sources"
         ),
         .testTarget(
-            name: "OpenTTDAdminPortTests",
-            dependencies: ["OpenTTDAdminPort"],
+            name: "OTTDAdminKitTests",
+            dependencies: ["OTTDAdminKit"],
             path: "Tests"
         ),
     ]
