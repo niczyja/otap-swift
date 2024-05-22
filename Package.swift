@@ -14,14 +14,23 @@ let package = Package(
             name: "OTTDAdminKit",
             targets: ["OTTDAdminKit"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/tsolomko/BitByteData.git", .upToNextMajor(from: "2.0.0"))
+    ],
     targets: [
         .target(
             name: "OTTDAdminKit",
+            dependencies: [
+                .product(name: "BitByteData", package: "BitByteData")
+            ],
             path: "Sources"
         ),
         .testTarget(
             name: "OTTDAdminKitTests",
-            dependencies: ["OTTDAdminKit"],
+            dependencies: [
+                "OTTDAdminKit",
+                .product(name: "BitByteData", package: "BitByteData")
+            ],
             path: "Tests"
         ),
     ]

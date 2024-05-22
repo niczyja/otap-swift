@@ -1,0 +1,15 @@
+{
+  "originHash" : "51b0d80f77bcd37f1047ef97c3aeef875340886f7dd6923c77ea9eee486b0e3f",
+  "pins" : [
+    {
+      "identity" : "bitbytedata",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tsolomko/BitByteData.git",
+      "state" : {
+        "revision" : "cdcdc5177ad536cfb11b95c620f926a81014b7fe",
+        "version" : "2.0.4"
+      }
+    }
+  ],
+  "version" : 3
+}
