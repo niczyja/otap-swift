@@ -70,3 +70,15 @@ extension NWProtocolFramer.Message {
         self[Self.packetHeaderKey] = packetHeader
     }
 }
+
+//MARK: -
+
+public extension NWParameters {
+    
+    static var otap: NWParameters = {
+        let parameters = NWParameters.tcp
+        let options = NWProtocolFramer.Options(definition: OTAP.definition)
+        parameters.defaultProtocolStack.applicationProtocols.insert(options, at: 0)
+        return parameters
+    }()
+}
