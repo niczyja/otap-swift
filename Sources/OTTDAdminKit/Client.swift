@@ -4,6 +4,7 @@ import Network
 
 public class OTAPClient {
     
+    public static let version: String = "0.1"
     public static let defaultPort: UInt16 = 3977
     public static let serverVersion: UInt8 = 3
 
