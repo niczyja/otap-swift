@@ -7,7 +7,10 @@ public enum OTAPError: Error {
          unknownPacketType,
          invalidPacketType,
          missingPacketHeader,
-         unexpectedPayloadLength
+         unexpectedPayloadLength,
+         missingMessageContext,
+         messageNotComplete,
+         cannotCreateMessage
 }
 
 //MARK: -
