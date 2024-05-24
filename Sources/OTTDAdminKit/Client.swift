@@ -8,22 +8,34 @@ public class OTAPClient {
     public static let defaultPort: UInt16 = 3977
     public static let serverVersion: UInt8 = 3
 
+    public let name: String
+    
     @Published public private(set) var state: NWConnection.State
     
     private let endpoint: NWEndpoint
     private let connection: NWConnection
     private var subscription: AnyCancellable?
     
-    public convenience init?(serverIp: String, port: UInt16 = OTAPClient.defaultPort) {
-        guard let address = IPv4Address(serverIp) else { return nil }
-        self.init(endpoint: .hostPort(host: .ipv4(address), port: .init(integerLiteral: port)))
+    public convenience init?(name: String, IPv4: String, port: UInt16 = OTAPClient.defaultPort) {
+        guard let address = IPv4Address(IPv4) else { return nil }
+        self.init(name: name, endpoint: .hostPort(host: .ipv4(address), port: .init(integerLiteral: port)))
     }
     
-    public convenience init(host: NWEndpoint.Host, port: NWEndpoint.Port = NWEndpoint.Port(integerLiteral: OTAPClient.defaultPort)) {
-        self.init(endpoint: .hostPort(host: host, port: port))
+    public convenience init?(name: String, IPv6: String, port: UInt16 = OTAPClient.defaultPort) {
+        guard let address = IPv6Address(IPv6) else { return nil }
+        self.init(name: name, endpoint: .hostPort(host: .ipv6(address), port: .init(integerLiteral: port)))
     }
     
-    public init(endpoint: NWEndpoint) {
+    public convenience init(name: String, hostName: String, port: UInt16 = OTAPClient.defaultPort) {
+        self.init(name: name, endpoint: .hostPort(host: .init(hostName), port: .init(integerLiteral: port)))
+    }
+    
+    public convenience init(name: String, host: NWEndpoint.Host, port: NWEndpoint.Port = .init(integerLiteral: OTAPClient.defaultPort)) {
+        self.init(name: name, endpoint: .hostPort(host: host, port: port))
+    }
+    
+    public init(name: String, endpoint: NWEndpoint) {
+        self.name = name
         self.endpoint = endpoint
         self.connection = NWConnection(to: self.endpoint, using: .otap)
         self.state = self.connection.state
