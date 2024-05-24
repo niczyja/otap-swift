@@ -2,13 +2,14 @@
 import Foundation
 
 public struct Packet {
-    public let type: PacketType
     public let payload: Payload
-    public var size: Int { PacketHeader.encodedLength + payload.size }
+    public private(set) var header: Header
+    public var size: Int { Header.encodedLength + payload.size }
     
     init(type: PacketType, payload: Payload) throws {
-        self.type = type
         self.payload = payload
+        self.header = Header(type: type)
+        self.header.packetSize = PacketType.PacketSize(self.size)
         
         guard self.size <= PacketType.MTU else {
             throw OTAPError.exceededMTUSize
@@ -18,33 +19,37 @@ public struct Packet {
 
 //MARK: -
 
-public struct PacketHeader {
-    public static let encodedLength: Int = PacketType.encodedSizeLength + PacketType.encodedByteLength
+extension Packet {
     
-    public let packetType: PacketType
-    public var packetSize: PacketType.PacketSize {
-        get {
-            data[0...1].toPacketSize()
+    public struct Header {
+        public static let encodedLength: Int = PacketType.encodedSizeLength + PacketType.encodedByteLength
+        
+        public private(set) var data: Data
+
+        public var packetType: PacketType {
+            get { PacketType(rawValue: data[2]) }
+            set { data[2] = newValue.rawValue }
         }
-        set {
-            data[0] = UInt8(newValue)
-            data[1] = UInt8(newValue >> 8)
+
+        public var packetSize: PacketType.PacketSize {
+            get { data[0...1].toPacketSize() }
+            set {
+                data[0] = UInt8(newValue)
+                data[1] = UInt8(newValue >> 8)
+            }
         }
-    }
-    public var payloadSize: Int {
-        Int(packetSize) - Self.encodedLength
-    }
-    public private(set) var data: Data
-    
-    init(type: PacketType) {
-        self.packetType = type
-        self.data = Data([0, 0, type.rawValue])
-    }
-    
-    init(buffer: Data) {
-        self.data = buffer
-        self.packetType = PacketType(rawValue: buffer[2])
-        self.packetSize = buffer[0...1].toPacketSize()
+
+        public var payloadSize: Int { Int(packetSize) - Self.encodedLength }
+
+        init(type: PacketType, size: PacketType.PacketSize? = nil) {
+            self.data = Data(count: Self.encodedLength)
+            self.packetType = type
+            self.packetSize = size ?? 0
+        }
+        
+        init(buffer: Data) {
+            self.data = buffer
+        }
     }
 }
 

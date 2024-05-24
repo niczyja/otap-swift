@@ -35,13 +35,13 @@ class OTAP: NWProtocolFramerImplementation {
     
     func handleInput(framer: NWProtocolFramer.Instance) -> Int {
         while true {
-            var header: PacketHeader? = nil
-            let headerLength = PacketHeader.encodedLength
+            var header: Packet.Header? = nil
+            let headerLength = Packet.Header.encodedLength
             let parsed = framer.parseInput(minimumIncompleteLength: headerLength, maximumLength: headerLength) { buffer, isComplete in
                 guard let buffer, buffer.count == headerLength else {
                     return 0
                 }
-                header = PacketHeader(buffer: Data(buffer))
+                header = Packet.Header(buffer: Data(buffer))
                 return headerLength
             }
             
@@ -63,9 +63,9 @@ extension NWProtocolFramer.Message {
     
     private static let packetHeaderKey = "PacketHeader"
     
-    var packetHeader: PacketHeader? { self[Self.packetHeaderKey] as? PacketHeader }
+    var packetHeader: Packet.Header? { self[Self.packetHeaderKey] as? Packet.Header }
     
-    convenience init(packetHeader: PacketHeader) {
+    convenience init(packetHeader: Packet.Header) {
         self.init(definition: OTAP.definition)
         self[Self.packetHeaderKey] = packetHeader
     }
