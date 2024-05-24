@@ -96,3 +96,10 @@ public class OTAPClient {
         }
     }
 }
+
+//MARK: -
+
+internal extension OTAPClient {
+    
+    static let logger: Logger = Logger(subsystem: "OTAP", category: "client")
+}
