@@ -58,7 +58,7 @@ extension Packet {
 internal extension PacketType.Request {
     
     var builder: Builder<WritablePayload, Packet> {
-        create { try Packet(type: PacketType(rawValue: rawValue), payload: $0) }
+        create { try Packet(type: self.type, payload: $0) }
     }
 }
 

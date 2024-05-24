@@ -59,8 +59,16 @@ public extension PacketType {
         self.init(rawValue: request.rawValue)
     }
     
+    var asRequest: Request? {
+        Request(rawValue: rawValue)
+    }
+
     init(_ response: Response) {
         self.init(rawValue: response.rawValue)
+    }
+    
+    var asResponse: Response? {
+        Response(rawValue: rawValue)
     }
 }
 
