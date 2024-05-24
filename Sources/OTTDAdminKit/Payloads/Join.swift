@@ -12,8 +12,8 @@ public struct Join: WritablePayload {
 
     public init(name: String, password: String, version: String) throws {
         self.writer = Writer()
-        self.writer.append(string: name, maxBytes: Self.maxNameLength)
         self.writer.append(string: password, maxBytes: Self.maxPasswordLength)
+        self.writer.append(string: name, maxBytes: Self.maxNameLength)
         self.writer.append(string: version, maxBytes: Self.maxVersionLength)
     }
 }
