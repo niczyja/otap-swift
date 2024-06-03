@@ -4,31 +4,31 @@
 import PackageDescription
 
 let package = Package(
-    name: "OTTDAdminKit",
+    name: "otap-swift",
     platforms: [
         .macOS("14.4"),
         .iOS("17.4")
     ],
     products: [
         .library(
-            name: "OTTDAdminKit",
-            targets: ["OTTDAdminKit"]),
+            name: "OTAPSwift",
+            targets: ["OTAPSwift"]),
     ],
     dependencies: [
         .package(url: "https://github.com/tsolomko/BitByteData.git", .upToNextMajor(from: "2.0.0"))
     ],
     targets: [
         .target(
-            name: "OTTDAdminKit",
+            name: "OTAPSwift",
             dependencies: [
                 .product(name: "BitByteData", package: "BitByteData")
             ],
             path: "Sources"
         ),
         .testTarget(
-            name: "OTTDAdminKitTests",
+            name: "OTAPSwiftTests",
             dependencies: [
-                "OTTDAdminKit",
+                "OTAPSwift",
                 .product(name: "BitByteData", package: "BitByteData")
             ],
             path: "Tests"
