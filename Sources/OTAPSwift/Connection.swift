@@ -2,46 +2,43 @@
 import Foundation
 import Network
 
-public class OTAPConnection {
-    
-    public typealias StateEmitter = AsyncThrowingStream<NWConnection.State, Error>
-    public typealias PacketEmitter = AsyncThrowingStream<Packet, Error>
+public actor OTAPConnection {
     
     public static let defaultPort: UInt16 = 3977
-    public static let loginTimeout: UInt8 = 10
+    public static let authenticationTimeout: UInt8 = 10
 
-    public lazy var state: StateEmitter = {
-        AsyncThrowingStream { continuation in
-            self.receiveState(with: continuation)
-        }
-    }()
-    public lazy var packets: PacketEmitter = {
-        AsyncThrowingStream { continuation in
-            self.receiveMessage(with: continuation)
-        }
-    }()
+    public var state: AsyncThrowingStream<NWConnection.State, Error> {
+        stateEmitter.stream
+    }
+    
+    public var packets: AsyncThrowingStream<Packet, Error> {
+        packetsEmitter.stream
+    }
     
     private let endpoint: NWEndpoint
     private let connection: NWConnection
+    private let stateEmitter = ThrowingEmitter<NWConnection.State, Error>()
+    private let packetsEmitter = ThrowingEmitter<Packet, Error>()
     
     public init(endpoint: NWEndpoint) {
         self.endpoint = endpoint
         self.connection = NWConnection(to: self.endpoint, using: .otap)
-        
+
         OTAPConnection.logger.info("Created connection to '\(endpoint)'.")
     }
     
-    deinit {
-        self.close()
-    }
-    
     public func start() {
-        OTAPConnection.logger.info("Connecting...")
+        setupStateListener()
+        receiveNextMessage()
         connection.start(queue: .main)
+        
+        OTAPConnection.logger.info("Connecting...")
     }
     
     public func close() {
         connection.cancel()
+        connection.stateUpdateHandler = nil
+        
         OTAPConnection.logger.info("Connection closed.")
     }
     
@@ -65,60 +62,69 @@ public class OTAPConnection {
 
 extension OTAPConnection {
 
-    private func receiveState(with continuation: StateEmitter.Continuation) {
+    private func setupStateListener() {
         self.connection.stateUpdateHandler = { newState in
             OTAPConnection.logger.info("Connection state changed to: \(newState)")
             
             switch newState {
             case .cancelled:
-                continuation.finish()
+                self.stateEmitter.finish()
             case .failed(let error):
-                continuation.finish(throwing: error)
+                self.stateEmitter.finish(throwing: error)
+            case .waiting(let reason):
+                OTAPConnection.logger.warn("Connection is waiting with reason: \(reason.localizedDescription). Restarting...")
+                self.stateEmitter.emit(newState)
+                self.connection.restart()
             default:
-                continuation.yield(newState)
+                self.stateEmitter.emit(newState)
             }
         }
+        
+        OTAPConnection.logger.info("Begin listening for state changes.")
     }
     
-    private func receiveMessage(with continuation: PacketEmitter.Continuation) {
-        self.connection.receiveMessage { content, contentContext, isComplete, error in
-            OTAPConnection.logger.info("Received message with: \(String(describing: content)), \(String(describing: contentContext)), \(isComplete), \(String(describing: error))")
+    private func receiveNextMessage() {
+        self.connection.receiveMessage { content, context, isComplete, error in
+            OTAPConnection.logger.info("Received message with: \(String(describing: content)), \(String(describing: context)), \(isComplete), \(String(describing: error))")
             
             if let error {
                 OTAPConnection.logger.error("Received message with error: \(error.localizedDescription).")
-                continuation.finish(throwing: error)
+                self.packetsEmitter.finish(throwing: error)
                 return
             }
-            guard let contentContext else {
-                continuation.finish(throwing: OTAPError.missingMessageContext)
+            guard let context else {
+                self.packetsEmitter.finish(throwing: OTAPError.missingMessageContext)
                 return
             }
             guard isComplete else {
-                continuation.finish(throwing: OTAPError.messageNotComplete)
+                self.packetsEmitter.finish(throwing: OTAPError.messageNotComplete)
                 return
             }
-            guard !contentContext.isFinal else {
-                continuation.finish()
+            guard !context.isFinal else {
+                self.packetsEmitter.finish()
                 return
             }
-            guard let message = contentContext.protocolMetadata(definition: OTAP.definition) as? NWProtocolFramer.Message else {
-                continuation.finish(throwing: OTAPError.cannotCreateMessage)
+            guard let message = context.protocolMetadata(definition: OTAP.definition) as? NWProtocolFramer.Message else {
+                self.packetsEmitter.finish(throwing: OTAPError.cannotCreateMessage)
                 return
             }
             guard let response = message.packetHeader?.packetType.asResponse else {
-                continuation.finish(throwing: OTAPError.invalidPacketType)
+                self.packetsEmitter.finish(throwing: OTAPError.invalidPacketType)
                 return
             }
             
             do {
                 let packet = try response.builder(content ?? Data())
-                continuation.yield(packet)
+                self.packetsEmitter.emit(packet)
+                Task {
+                    await self.receiveNextMessage()
+                }
             } catch {
-                continuation.finish(throwing: error)
+                self.packetsEmitter.finish(throwing: error)
             }
-            
-            self.receiveMessage(with: continuation)
         }
+
+        OTAPConnection.logger.info("Ready to receive next message.")
     }
 }
 

@@ -10,7 +10,10 @@ public enum OTAPError: Error {
          unexpectedPayloadLength,
          missingMessageContext,
          messageNotComplete,
-         cannotCreateMessage
+         cannotCreateMessage,
+         alreadyConnected,
+         notConnected,
+         unsupportedProtocolVersion
 }
 
 //MARK: -

@@ -5,7 +5,8 @@ import Network
 class OTAP: NWProtocolFramerImplementation {
     
     static let definition = NWProtocolFramer.Definition(implementation: OTAP.self)
-    static var label: String = "OpenTTD Admin Protocol"
+    static let label: String = "OpenTTD Admin Protocol"
+    static let version: UInt8 = 3
     
     required init(framer: NWProtocolFramer.Instance) { }
     
