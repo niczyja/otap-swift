@@ -59,7 +59,7 @@ extension Task where Failure == Error {
                         @_implicitSelfCapture operation: @escaping @Sendable () async throws -> Success
     ) -> Task {
         Task(priority: priority) {
-            try await Task<Never, Never>.sleep(for: duration)
+            try await Task<Never, Never>.sleep(for: duration, tolerance: .zero)
             return try await operation()
         }
     }

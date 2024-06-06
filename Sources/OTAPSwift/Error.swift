@@ -13,7 +13,8 @@ public enum OTAPError: Error {
          cannotCreateMessage,
          alreadyConnected,
          notConnected,
-         unsupportedProtocolVersion
+         unsupportedProtocolVersion,
+         serverError(NetworkError)
 }
 
 //MARK: -

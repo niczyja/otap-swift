@@ -53,8 +53,8 @@ public extension OTAPClient {
         }
 
         connection = OTAPConnection(endpoint: endpoint)
-        await connection!.start()
         state = .connecting
+        await connection!.start()
         
         for try await state in await connection!.state {
             if case .ready = state {
@@ -64,7 +64,7 @@ public extension OTAPClient {
         }
         
         authenticationTimer = Task.delayed(for: .seconds(OTAPConnection.authenticationTimeout), priority: .utility) {
-            OTAPClient.logger.warn("Authentication timeout, disconnecting...")
+            OTAPClient.logger.error("Authentication timeout, disconnecting...")
             await self.disconnect()
         }
         
@@ -72,10 +72,10 @@ public extension OTAPClient {
     }
     
     func disconnect() async {
-        authenticationTimer?.cancel()
-        await connection?.close()
         state = .disconnected
+        await connection?.close()
         connection = nil
+        authenticationTimer = nil
         
         OTAPClient.logger.info("Client '\(name)' disconnected.")
     }
@@ -88,6 +88,8 @@ public extension OTAPClient {
     
     @discardableResult
     func join(password: String) async throws -> Server {
+        OTAPClient.logger.info("Authenticating...")
+        
         authenticationTimer?.cancel()
         guard let connection, state == .connected else {
             throw OTAPError.notConnected
@@ -106,18 +108,26 @@ public extension OTAPClient {
             }
             
             if case .response(.welcome) = packet.header.packetType {
-                guard let payload = packet.payload as? Welcome else {
-                    fatalError("Packet payload does not match its type. This should not happen.")
-                }
                 OTAPClient.logger.info("Client '\(name)' authenticated.")
                 state = .authenticated
-                return payload.server
+                return (packet.payload as! Welcome).server
+            }
+            
+            // I didn't observe this to happen. Theoretically server sends error packet, but also closes connection immediately.
+            if case .response(.error) = packet.header.packetType {
+                let error = OTAPError.serverError((packet.payload as! ServerError).error)
+                OTAPClient.logger.error("Server returned an error: \(error)")
+                await disconnect()
+                throw error
             }
 
             break
         }
-        
-        throw OTAPError.invalidPacketType
+
+        // Because we don't get exact error type from server I think it's useful to assume here that it was an authentication error
+        OTAPClient.logger.error("Wrong password.")
+        await disconnect()
+        throw OTAPError.serverError(.wrongPassword)
     }
 }
 
