@@ -107,15 +107,19 @@ public struct Writer {
         data.append(byte)
     }
 
-    internal mutating func append(int: any UnsignedInteger) {
-        let size = MemoryLayout.size(ofValue: int)
-        for i in 0..<size {
-            data.append(UInt8(int) >> (8 * i))
+    internal mutating func append<I>(int: I) where I: UnsignedInteger & FixedWidthInteger {
+        let size = MemoryLayout<I>.size
+        var value = int.littleEndian
+        withUnsafeBytes(of: &value) {
+            for i in 0..<size {
+                data.append($0[i])
+            }
         }
     }
     
     internal mutating func append(string: String, maxBytes: Int? = nil) {
-        if let stringData = string.data(using: .utf8) {
+        let escaped = string.unicodeScalars.map({ $0.escaped(asASCII: false) }).joined()
+        if let stringData = escaped.data(using: .utf8) {
             data.append(contentsOf: [UInt8](stringData.prefix(maxBytes ?? stringData.count)))
         }
         data.append(0)
