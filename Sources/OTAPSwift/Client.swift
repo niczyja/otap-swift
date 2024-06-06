@@ -80,12 +80,6 @@ public extension OTAPClient {
         OTAPClient.logger.info("Client '\(name)' disconnected.")
     }
     
-}
-
-//MARK: -
-
-public extension OTAPClient {
-    
     @discardableResult
     func join(password: String) async throws -> Server {
         OTAPClient.logger.info("Authenticating...")
@@ -128,6 +122,37 @@ public extension OTAPClient {
         OTAPClient.logger.error("Wrong password.")
         await disconnect()
         throw OTAPError.serverError(.wrongPassword)
+    }
+    
+    func ping() async throws -> Bool {
+        OTAPClient.logger.info("Ping")
+        
+        guard let connection else {
+            throw OTAPError.notConnected
+        }
+        guard state == .authenticated else {
+            throw OTAPError.notAuthenticated
+        }
+        
+        let identifier = UInt32.random(in: 0...UInt32.max)
+        let packet = try PacketType.Request.ping.builder(try Ping(id: identifier))
+        try await connection.send(packet)
+        
+        for try await packet in await connection.packets {
+            if case .response(.pong) = packet.header.packetType {
+                return (packet.payload as! Pong).id == identifier
+            }
+            
+            if case .response(.error) = packet.header.packetType {
+                let error = OTAPError.serverError((packet.payload as! ServerError).error)
+                OTAPClient.logger.error("Server returned an error: \(error)")
+                throw error
+            }
+            
+            break
+        }
+        
+        throw OTAPError.invalidPacketType
     }
 }
 

@@ -64,4 +64,20 @@ final class IntegrationTests: XCTestCase {
         
         XCTAssertEqual(client.state, .disconnected)
     }
+    
+    func testPingPong() async throws {
+        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+
+        try await client.connect()
+        XCTAssertEqual(client.state, .connected)
+
+        try await client.join(password: Self.password)
+        XCTAssertEqual(client.state, .authenticated)
+        
+        let pong = try await client.ping()
+        XCTAssertTrue(pong)
+        
+        await client.disconnect()
+        XCTAssertEqual(client.state, .disconnected)
+    }
 }
