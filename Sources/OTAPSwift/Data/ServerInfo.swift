@@ -1,7 +1,7 @@
 
 // https://github.com/OpenTTD/OpenTTD/blob/d9cadb49b069fc27f4778665bd1db8f0c31037bb/src/network/network_admin.cpp#L170
 
-public struct Server {
+public struct ServerInfo {
     public let name: String                 ///< name of the server
     public let revision: String             ///< ottd revision run by this server
     public let isDedicated: Bool            ///< is it a dedicated server

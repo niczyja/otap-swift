@@ -81,7 +81,7 @@ public extension OTAPClient {
     }
     
     @discardableResult
-    func join(password: String) async throws -> Server {
+    func join(password: String) async throws -> ServerInfo {
         OTAPClient.logger.info("Authenticating...")
         
         authenticationTimer?.cancel()
@@ -104,7 +104,7 @@ public extension OTAPClient {
             if case .response(.welcome) = packet.header.packetType {
                 OTAPClient.logger.info("Client '\(name)' authenticated.")
                 state = .authenticated
-                return (packet.payload as! Welcome).server
+                return (packet.payload as! Welcome).serverInfo
             }
             
             // I didn't observe this to happen. Theoretically server sends error packet, but also closes connection immediately.
