@@ -55,41 +55,6 @@ public enum PacketType {
 
 public extension PacketType {
     
-    init(_ request: Request) {
-        self.init(rawValue: request.rawValue)
-    }
-    
-    var asRequest: Request? {
-        Request(rawValue: rawValue)
-    }
-
-    init(_ response: Response) {
-        self.init(rawValue: response.rawValue)
-    }
-    
-    var asResponse: Response? {
-        Response(rawValue: rawValue)
-    }
-}
-
-public extension PacketType.Request {
-    
-    var type: PacketType {
-        PacketType(self)
-    }
-}
-
-public extension PacketType.Response {
-    
-    var type: PacketType {
-        PacketType(self)
-    }
-}
-
-//MARK: -
-
-public extension PacketType {
-    
     static let MTU: Int = 1460
     
     typealias PacketByte = UInt8

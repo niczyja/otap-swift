@@ -89,7 +89,7 @@ public extension OTAPClient {
             throw OTAPError.notConnected
         }
         
-        let packet = try PacketType.Request.join.builder(try Join(name: self.name, password: password, version: OTAPClient.version))
+        let packet = try PacketType.request(.join).packet(with: Join(name: name, password: password, version: Self.version))
         try await connection.send(packet)
         
         for try await packet in await connection.packets {
@@ -135,7 +135,7 @@ public extension OTAPClient {
         }
         
         let identifier = UInt32.random(in: 0...UInt32.max)
-        let packet = try PacketType.Request.ping.builder(try Ping(id: identifier))
+        let packet = try PacketType.request(.ping).packet(with: Ping(id: identifier))
         try await connection.send(packet)
         
         for try await packet in await connection.packets {

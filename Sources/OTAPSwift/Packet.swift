@@ -25,12 +25,12 @@ extension Packet {
         public static let encodedLength: Int = PacketType.encodedSizeLength + PacketType.encodedByteLength
         
         public private(set) var data: Data
-
+        
         public var packetType: PacketType {
             get { PacketType(rawValue: data[2]) }
             set { data[2] = newValue.rawValue }
         }
-
+        
         public var packetSize: PacketType.PacketSize {
             get { data[0...1].toPacketSize() }
             set {
@@ -38,9 +38,9 @@ extension Packet {
                 data[1] = UInt8(newValue >> 8)
             }
         }
-
+        
         public var payloadSize: Int { Int(packetSize) - Self.encodedLength }
-
+        
         init(type: PacketType, size: PacketType.PacketSize? = nil) {
             self.data = Data(count: Self.encodedLength)
             self.packetType = type
@@ -55,75 +55,101 @@ extension Packet {
 
 //MARK: -
 
-internal extension PacketType.Request {
+internal extension PacketType {
     
-    var builder: Builder<WritablePayload, Packet> {
-        create { try Packet(type: self.type, payload: $0) }
-    }
-}
-
-//MARK: -
-
-internal extension PacketType.Response {
+    //MARK: Creating request packets
     
-    var builder: Builder<Data, Packet> {
+    func packet(with payload: WritablePayload) throws -> Packet {
         switch self {
-        case .full:
-            fatalError()
-        case .banned:
-            fatalError()
-        case .error:
-            create { try Packet(type: self.type, payload: ServerError(data: $0)) }
-        case .protocolVersion:
-            create { try Packet(type: self.type, payload: ProtocolVersion(data: $0)) }
-        case .welcome:
-            create { try Packet(type: self.type, payload: Welcome(data: $0)) }
-        case .newGame:
-            fatalError()
-        case .shutdown:
-            create { _ in try Packet(type: self.type, payload: Empty()) }
-        case .date:
-            fatalError()
-        case .clientJoin:
-            fatalError()
-        case .clientInfo:
-            fatalError()
-        case .clientUpdate:
-            fatalError()
-        case .clientQuit:
-            fatalError()
-        case .clientError:
-            fatalError()
-        case .companyNew:
-            fatalError()
-        case .companyInfo:
-            fatalError()
-        case .companyUpdate:
-            fatalError()
-        case .companyRemove:
-            fatalError()
-        case .companyEconomy:
-            fatalError()
-        case .companyStats:
-            fatalError()
-        case .chat:
-            fatalError()
-        case .rcon:
-            fatalError()
-        case .console:
-            fatalError()
-        case .cmdNames:
-            fatalError()
-        case .cmdLoggingOld:
-            fatalError()
-        case .gameScript:
-            fatalError()
-        case .rconEnd:
-            fatalError()
-        case .pong:
-            create { try Packet(type: PacketType(self), payload: Pong(data: $0)) }
-        case .cmdLogging:
-            fatalError()
+        case .request(.join),
+                .request(.updateFrequency),
+                .request(.poll),
+                .request(.chat),
+                .request(.rcon),
+                .request(.gameScript),
+                .request(.ping),
+                .request(.externalChat):
+            return try Packet(type: self, payload: payload)
+        default:
+            throw OTAPError.cannotCreatePacket
+        }
+    }
+    
+    func packet() throws -> Packet {
+        switch self {
+        case .request(.quit):
+            return try Packet(type: self, payload: Empty())
+        default:
+            throw OTAPError.cannotCreatePacket
+        }
+    }
+    
+    //MARK: Creating response packets
+    
+    func packet(with data: Data?) throws -> Packet {
+        guard let data else {
+            switch self {
+            case .response(.full),
+                    .response(.banned),
+                    .response(.newGame),
+                    .response(.shutdown):
+                return try Packet(type: self, payload: Empty())
+            default:
+                throw OTAPError.cannotCreatePacket
+            }
+        }
+        
+        switch self {
+        case .response(.error):
+            return try Packet(type: self, payload: ServerError(data: data))
+        case .response(.protocolVersion):
+            return try Packet(type: self, payload: ProtocolVersion(data: data))
+        case .response(.welcome):
+            return try Packet(type: self, payload: Welcome(data: data))
+        case .response(.date):
+            fatalError("Not implemented")
+        case .response(.clientJoin):
+            fatalError("Not implemented")
+        case .response(.clientInfo):
+            fatalError("Not implemented")
+        case .response(.clientUpdate):
+            fatalError("Not implemented")
+        case .response(.clientQuit):
+            fatalError("Not implemented")
+        case .response(.clientError):
+            fatalError("Not implemented")
+        case .response(.companyNew):
+            fatalError("Not implemented")
+        case .response(.companyInfo):
+            fatalError("Not implemented")
+        case .response(.companyUpdate):
+            fatalError("Not implemented")
+        case .response(.companyRemove):
+            fatalError("Not implemented")
+        case .response(.companyEconomy):
+            fatalError("Not implemented")
+        case .response(.companyStats):
+            fatalError("Not implemented")
+        case .response(.chat):
+            fatalError("Not implemented")
+        case .response(.rcon):
+            fatalError("Not implemented")
+        case .response(.console):
+            fatalError("Not implemented")
+        case .response(.cmdNames):
+            fatalError("Not implemented")
+        case .response(.cmdLoggingOld):
+            fatalError("Not implemented")
+        case .response(.gameScript):
+            fatalError("Not implemented")
+        case .response(.rconEnd):
+            fatalError("Not implemented")
+        case .response(.pong):
+            return try Packet(type: self, payload: Pong(data: data))
+        case .response(.cmdLogging):
+            fatalError("Not implemented")
+        default:
+            throw OTAPError.cannotCreatePacket
         }
     }
 }

@@ -108,13 +108,13 @@ extension OTAPConnection {
                 self.packetsEmitter.finish(throwing: OTAPError.cannotCreateMessage)
                 return
             }
-            guard let response = message.packetHeader?.packetType.asResponse else {
+            guard let response = message.packetHeader?.packetType else {
                 self.packetsEmitter.finish(throwing: OTAPError.invalidPacketType)
                 return
             }
             
             do {
-                let packet = try response.builder(content ?? Data())
+                let packet = try response.packet(with: content)
                 self.packetsEmitter.emit(packet)
                 Task {
                     await self.receiveNextMessage()
