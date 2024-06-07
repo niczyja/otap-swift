@@ -80,4 +80,17 @@ final class IntegrationTests: XCTestCase {
         await client.disconnect()
         XCTAssertEqual(client.state, .disconnected)
     }
+    
+    func testQuit() async throws {
+        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+
+        try await client.connect()
+        XCTAssertEqual(client.state, .connected)
+
+        try await client.join(password: Self.password)
+        XCTAssertEqual(client.state, .authenticated)
+        
+        try await client.quit()
+        XCTAssertEqual(client.state, .disconnected)
+    }
 }

@@ -124,6 +124,20 @@ public extension OTAPClient {
         throw OTAPError.serverError(.wrongPassword)
     }
     
+    func quit() async throws {
+        OTAPClient.logger.info("About to quit")
+        
+        guard let connection else {
+            throw OTAPError.notConnected
+        }
+        guard state == .authenticated else {
+            throw OTAPError.notAuthenticated
+        }
+
+        try await connection.send(try PacketType.request(.quit).packet())
+        await disconnect()
+    }
+    
     func ping() async throws -> Bool {
         OTAPClient.logger.info("Ping")
         
