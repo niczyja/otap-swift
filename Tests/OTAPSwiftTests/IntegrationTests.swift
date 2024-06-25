@@ -65,6 +65,27 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(client.state, .disconnected)
     }
     
+    func testPublishers() async throws {
+        let expectedStateSequence: [OTAPClient.State] = [.disconnected, .connecting, .connected, .authenticated, .disconnected]
+        var actualStateSequence: [OTAPClient.State] = []
+        var gameServer: GameServer? = nil
+        
+        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+        let sub1 = client.$state.sink { actualStateSequence.append($0) }
+        let sub2 = client.$gameServer.sink { gameServer = $0 }
+        
+        try await client.connect()
+        try await client.join(password: Self.password)
+        try await client.quit()
+        
+        XCTAssertEqual(expectedStateSequence, actualStateSequence)
+        XCTAssertNotNil(client.gameServer)
+        XCTAssertNotNil(gameServer)
+        
+        sub1.cancel()
+        sub2.cancel()
+    }
+    
     func testPingPong() async throws {
         let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
 

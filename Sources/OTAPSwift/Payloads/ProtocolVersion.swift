@@ -5,7 +5,7 @@ import Foundation
 
 public struct ProtocolVersion: ReadablePayload {
     public let version: UInt8
-    public private(set) var frequencies: [Update: Update.Frequency] = [:]
+    public private(set) var updates: GameServer.Updates = [:]
     public let reader: Reader
     
     public init(data: Data) throws {
@@ -17,11 +17,11 @@ public struct ProtocolVersion: ReadablePayload {
         self.version = try self.reader.readByte()
         
         while (try self.reader.readBool()) {
-            guard let update = Update(rawValue: try self.reader.readUInt16()) else {
+            guard let updateType = GameServer.Update(rawValue: try self.reader.readUInt16()) else {
                 throw OTAPError.malformedPayload
             }
 
-            frequencies[update] = Update.Frequency(rawValue: try self.reader.readUInt16())
+            updates[updateType] = GameServer.Update.Frequency(rawValue: try self.reader.readUInt16())
         }
     }
 }

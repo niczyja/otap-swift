@@ -12,7 +12,9 @@ public class OTAPClient {
 
     public let name: String
     public let endpoint: NWEndpoint
-    public private(set) var state: State = .disconnected
+    
+    @Published public private(set) var state: State = .disconnected
+    @Published public private(set) var gameServer: GameServer?
     
     private var connection: OTAPConnection?
     private var authenticationTimer: Task<Void, Error>?
@@ -80,8 +82,7 @@ public extension OTAPClient {
         OTAPClient.logger.info("Client '\(name)' disconnected.")
     }
     
-    @discardableResult
-    func join(password: String) async throws -> ServerInfo {
+    func join(password: String) async throws {
         OTAPClient.logger.info("Authenticating...")
         
         authenticationTimer?.cancel()
@@ -91,20 +92,38 @@ public extension OTAPClient {
         
         let packet = try PacketType.request(.join).packet(with: Join(name: name, password: password, version: Self.version))
         try await connection.send(packet)
-        
+
+        var protocolVersion: UInt8?
+        var serverUpdates: GameServer.Updates?
+
         for try await packet in await connection.packets {
             if case .response(.protocolVersion) = packet.header.packetType {
                 guard let payload = packet.payload as? ProtocolVersion, payload.version <= OTAP.version else {
                     await disconnect()
                     throw OTAPError.unsupportedProtocolVersion
                 }
+
+                protocolVersion = payload.version
+                serverUpdates = payload.updates
+
                 continue
             }
             
             if case .response(.welcome) = packet.header.packetType {
-                OTAPClient.logger.info("Client '\(name)' authenticated.")
+                guard let payload = packet.payload as? Welcome, let protocolVersion, let serverUpdates else {
+                    await disconnect()
+                    throw OTAPError.invalidPacketType
+                }
+
                 state = .authenticated
-                return (packet.payload as! Welcome).serverInfo
+                OTAPClient.logger.info("Client '\(name)' authenticated.")
+                
+                self.gameServer = GameServer(protocolVersion: protocolVersion,
+                                             info: payload.serverInfo,
+                                             map: payload.serverMap,
+                                             updates: serverUpdates)
+                
+                return
             }
             
             // I didn't observe this to happen. Theoretically server sends error packet, but also closes connection immediately.
