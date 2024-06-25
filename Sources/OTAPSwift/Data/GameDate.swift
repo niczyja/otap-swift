@@ -19,15 +19,18 @@ public struct GameDate: RawRepresentable {
 
 extension GameDate: Comparable {
     
-    @inlinable public static func < (lhs: Self, rhs: Self) -> Bool {
+    @inlinable @inline(__always)
+    public static func < (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 
-    @inlinable public static func + (lhs: Self, rhs: Self) -> Self {
+    @inlinable @inline(__always)
+    public static func + (lhs: Self, rhs: Self) -> Self {
         GameDate(rawValue: lhs.rawValue + rhs.rawValue)
     }
 
-    @inlinable public static func - (lhs: Self, rhs: Self) -> Self {
+    @inlinable @inline(__always)
+    public static func - (lhs: Self, rhs: Self) -> Self {
         GameDate(rawValue: lhs.rawValue - rhs.rawValue)
     }
 }
