@@ -20,14 +20,14 @@ public struct Welcome: ReadablePayload {
         let mapName = try self.reader.readString()
         let mapSeed = try self.reader.readUInt32()
         let landscape = try self.reader.readByte()
-        let startingYear = try self.reader.readUInt32()
+        let startDate = try self.reader.readUInt32()
         let mapSizeX = try self.reader.readUInt16()
         let mapSizeY = try self.reader.readUInt16()
         
         self.serverInfo = ServerInfo(name: serverName,
                                      revision: serverRevision,
                                      isDedicated: isDedicated,
-                                     startingYear: startingYear,
+                                     startDate: GameDate(rawValue: startDate),
                                      map: ServerInfo.Map(name: mapName,
                                                          seed: mapSeed,
                                                          landscape: landscape,

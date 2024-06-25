@@ -5,7 +5,7 @@ public struct ServerInfo {
     public let name: String                 ///< name of the server
     public let revision: String             ///< ottd revision run by this server
     public let isDedicated: Bool            ///< is it a dedicated server
-    public let startingYear: UInt32         ///< current game starting year
+    public let startDate: GameDate          ///< current game starting year
     public let map: Map
 
     public struct Map {

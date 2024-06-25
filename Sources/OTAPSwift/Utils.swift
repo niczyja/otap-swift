@@ -52,3 +52,12 @@ extension Task where Failure == Error {
         }
     }
 }
+
+//MARK: -
+
+extension ExpressibleByIntegerLiteral {
+
+    init(_ booleanLiteral: BooleanLiteralType) {
+        self = booleanLiteral ? 1 : 0
+    }
+}
