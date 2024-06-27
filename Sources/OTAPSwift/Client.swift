@@ -146,13 +146,10 @@ public extension OTAPClient {
     func quit() async throws {
         OTAPClient.logger.info("About to quit")
         
-        guard let connection else {
+        guard let connection, state != .disconnected else {
             throw OTAPError.notConnected
         }
-        guard state == .authenticated else {
-            throw OTAPError.notAuthenticated
-        }
-
+        
         try await connection.send(try PacketType.request(.quit).packet())
         await disconnect()
     }
