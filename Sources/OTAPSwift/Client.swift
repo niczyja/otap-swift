@@ -53,7 +53,7 @@ public extension OTAPClient {
         guard connection == nil else {
             throw OTAPError.alreadyConnected
         }
-
+        
         connection = OTAPConnection(endpoint: endpoint)
         state = .connecting
         await connection!.start()
@@ -92,20 +92,20 @@ public extension OTAPClient {
         
         let packet = try PacketType.request(.join).packet(with: Join(name: name, password: password, version: Self.version))
         try await connection.send(packet)
-
+        
         var protocolVersion: UInt8?
         var serverUpdates: GameServer.Updates?
-
+        
         for try await packet in await connection.packets {
             if case .response(.protocolVersion) = packet.header.packetType {
                 guard let payload = packet.payload as? ProtocolVersion, payload.version <= OTAP.version else {
                     await disconnect()
                     throw OTAPError.unsupportedProtocolVersion
                 }
-
+                
                 protocolVersion = payload.version
                 serverUpdates = payload.updates
-
+                
                 continue
             }
             
@@ -114,7 +114,7 @@ public extension OTAPClient {
                     await disconnect()
                     throw OTAPError.invalidPacketType
                 }
-
+                
                 state = .authenticated
                 OTAPClient.logger.info("Client '\(name)' authenticated.")
                 
@@ -133,10 +133,10 @@ public extension OTAPClient {
                 await disconnect()
                 throw error
             }
-
+            
             break
         }
-
+        
         // Because we don't get exact error type from server I think it's useful to assume here that it was an authentication error
         OTAPClient.logger.error("Wrong password.")
         await disconnect()
