@@ -43,6 +43,7 @@ public extension GameServer {
     
     typealias Updates = [Update: Update.Frequency]
 
+    /// Type of update about the game state that can be received from the server
     enum Update: UInt16 {
         case date,              ///< Updates about the date of the game. Default frequency: poll | daily | weekly | monthly | quarterly | anually
              clientInfo,        ///< Updates about the information of clients. Default frequency: poll | automatic
@@ -55,6 +56,7 @@ public extension GameServer {
              cmdLogging,        ///< The admin would like to have DoCommand information. Default frequency: automatic
              gameScript         ///< The admin would like to have gamescript messages. Default frequency: automatic
 
+        /// Possible frequencies of updates
         public struct Frequency: OptionSet {
             public var rawValue: UInt16
             
@@ -66,8 +68,36 @@ public extension GameServer {
             public static let anually      = Frequency(rawValue: 0x20) ///< The admin gets information about this on a yearly basis.
             public static let automatic    = Frequency(rawValue: 0x40) ///< The admin gets information about this when it changes.
             
+            public static let all: Frequency = [.poll, .daily, .weekly, .monthly, .quarterly, .anually, .automatic]
+            
             public init(rawValue: UInt16) {
                 self.rawValue = rawValue
+            }
+        }
+        
+        /// Default frequency for given update type
+        public var defaultFrequency: Frequency {
+            switch self {
+            case .date, .clientInfo, .companyInfo, .companyEconomy, .companyStats, .cmdNames:
+                return .poll
+            case .chat, .console, .cmdLogging, .gameScript:
+                return .automatic
+            }
+        }
+        
+        /// Allowed frequencies for given update type
+        public var allowedFrequencies: Frequency {
+            switch self {
+            case .date:
+                return .all
+            case .clientInfo, .companyInfo:
+                return [.poll, .automatic]
+            case .companyEconomy, .companyStats:
+                return .all.subtracting(.daily)
+            case .chat, .console, .cmdLogging, .gameScript:
+                return .automatic
+            case .cmdNames:
+                return .poll
             }
         }
     }
