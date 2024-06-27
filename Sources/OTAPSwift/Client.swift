@@ -157,12 +157,8 @@ public extension OTAPClient {
     func ping() async throws -> Bool {
         OTAPClient.logger.info("Ping")
         
-        guard let connection else {
-            throw OTAPError.notConnected
-        }
-        guard state == .authenticated else {
-            throw OTAPError.notAuthenticated
-        }
+        guard let connection else { throw OTAPError.notConnected }
+        guard state == .authenticated else { throw OTAPError.notAuthenticated }
         
         let identifier = UInt32.random(in: 0...UInt32.max)
         let packet = try PacketType.request(.ping).packet(with: Ping(id: identifier))
@@ -172,13 +168,9 @@ public extension OTAPClient {
             if case .response(.pong) = packet.header.packetType {
                 return (packet.payload as! Pong).id == identifier
             }
-            
             if case .response(.error) = packet.header.packetType {
-                let error = OTAPError.serverError((packet.payload as! ServerError).error)
-                OTAPClient.logger.error("Server returned an error: \(error)")
-                throw error
+                throw OTAPError.serverError((packet.payload as! ServerError).error)
             }
-            
             break
         }
         
