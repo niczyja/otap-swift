@@ -104,6 +104,33 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(client.state, .disconnected)
     }
     
+    func testSetUpdateType() async throws {
+        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+
+        try await client.connect()
+        XCTAssertEqual(client.state, .connected)
+
+        try await client.join(password: Self.password)
+        XCTAssertEqual(client.state, .authenticated)
+        
+        let frequencies: [GameServer.Update.Frequency] = [.poll, .daily, .weekly, .monthly, .quarterly, .anually, .automatic]
+        for update in GameServer.Update.allCases {
+            for frequency in frequencies {
+                if update.allowedFrequencies.contains(frequency) {
+                    try await client.set(update: frequency, for: update)
+                } else {
+                    do {
+                        try await client.set(update: frequency, for: update)
+                        XCTFail("Call is expected to throw")
+                    } catch { }
+                }
+            }
+        }
+
+        try await client.quit()
+        XCTAssertEqual(client.state, .disconnected)
+    }
+    
     func testQuit() async throws {
         let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
 

@@ -44,7 +44,7 @@ public extension GameServer {
     typealias Updates = [Update: Update.Frequency]
 
     /// Type of update about the game state that can be received from the server
-    enum Update: UInt16 {
+    enum Update: UInt16, CaseIterable {
         case date,              ///< Updates about the date of the game. Default frequency: poll | daily | weekly | monthly | quarterly | anually
              clientInfo,        ///< Updates about the information of clients. Default frequency: poll | automatic
              companyInfo,       ///< Updates about the generic information of companies. Default frequency: poll | automatic
@@ -89,11 +89,11 @@ public extension GameServer {
         public var allowedFrequencies: Frequency {
             switch self {
             case .date:
-                return .all
+                return .all.subtracting(.automatic)
             case .clientInfo, .companyInfo:
                 return [.poll, .automatic]
             case .companyEconomy, .companyStats:
-                return .all.subtracting(.daily)
+                return .all.subtracting([.daily, .automatic])
             case .chat, .console, .cmdLogging, .gameScript:
                 return .automatic
             case .cmdNames:
