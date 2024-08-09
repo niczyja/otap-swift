@@ -18,13 +18,13 @@ class OTAP: NWProtocolFramerImplementation {
     func handleOutput(framer: NWProtocolFramer.Instance, message: NWProtocolFramer.Message, messageLength: Int, isComplete: Bool) {
         do {
             guard let header = message.packetHeader else {
-                throw OTAPError.missingPacketHeader
+                throw OTAPProtocolError.missingPacketHeader
             }
             guard case .request(_) = header.packetType else {
-                throw OTAPError.invalidPacketType
+                throw OTAPProtocolError.invalidPacketType
             }
             guard header.payloadSize == messageLength else {
-                throw OTAPError.unexpectedPayloadLength
+                throw OTAPProtocolError.unexpectedPayloadLength
             }
             
             framer.writeOutput(data: header.data)
@@ -82,4 +82,12 @@ public extension NWParameters {
         parameters.defaultProtocolStack.applicationProtocols.insert(options, at: 0)
         return parameters
     }()
+}
+
+//MARK: -
+
+enum OTAPProtocolError: Error {
+    case missingPacketHeader,
+         invalidPacketType,
+         unexpectedPayloadLength
 }
