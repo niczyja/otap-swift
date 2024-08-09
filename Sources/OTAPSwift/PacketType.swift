@@ -1,5 +1,5 @@
 
-public enum PacketType {
+public enum PacketType: Equatable {
     
     case request(Request),
          response(Response),

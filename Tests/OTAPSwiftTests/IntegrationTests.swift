@@ -1,5 +1,6 @@
 
 import XCTest
+import Network
 @testable import OTAPSwift
 
 final class IntegrationTests: XCTestCase {
@@ -45,25 +46,26 @@ final class IntegrationTests: XCTestCase {
         do {
             try await client.join(password: "wrong password")
         } catch {
-            if case OTAPError.serverError(.wrongPassword) = error {
+            if case OTAPClientError.serverError(.wrongPassword) = error {
                 expectataion.fulfill()
             }
         }
         
         await fulfillment(of: [expectataion], timeout: TimeInterval(OTAPConnection.authenticationTimeout))
     }
-    
-    func testAuthenticationTimeout() async throws {
-        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
 
-        try await client.connect()
-        XCTAssertEqual(client.state, .connected)
-        
-        let _ = await XCTWaiter.fulfillment(of: [expectation(description: "Allow authentication timeout to pass.")],
-                                                 timeout: TimeInterval(OTAPConnection.authenticationTimeout))
-        
-        XCTAssertEqual(client.state, .disconnected)
-    }
+//TODO: bring it back along with Listeners
+//    func testAuthenticationTimeout() async throws {
+//        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+//
+//        try await client.connect()
+//        XCTAssertEqual(client.state, .connected)
+//        
+//        let _ = await XCTWaiter.fulfillment(of: [expectation(description: "Allow authentication timeout to pass.")],
+//                                                 timeout: TimeInterval(OTAPConnection.authenticationTimeout))
+//        
+//        XCTAssertEqual(client.state, .disconnected)
+//    }
     
     func testPublishers() async throws {
         let expectedStateSequence: [OTAPClient.State] = [.disconnected, .connecting, .connected, .authenticated, .disconnected]

@@ -12,7 +12,7 @@ public struct Packet {
         self.header.packetSize = PacketType.PacketSize(self.size)
         
         guard self.size <= PacketType.MTU else {
-            throw OTAPError.exceededMTUSize
+            throw OTAPPacketError.exceededMTUSize
         }
     }
 }
@@ -71,7 +71,7 @@ internal extension PacketType {
                 .request(.externalChat):
             return try Packet(type: self, payload: payload)
         default:
-            throw OTAPError.cannotCreatePacket
+            throw OTAPPacketError.cannotCreatePacket
         }
     }
     
@@ -80,7 +80,7 @@ internal extension PacketType {
         case .request(.quit):
             return try Packet(type: self, payload: Empty())
         default:
-            throw OTAPError.cannotCreatePacket
+            throw OTAPPacketError.cannotCreatePacket
         }
     }
     
@@ -95,7 +95,7 @@ internal extension PacketType {
                     .response(.shutdown):
                 return try Packet(type: self, payload: Empty())
             default:
-                throw OTAPError.cannotCreatePacket
+                throw OTAPPacketError.cannotCreatePacket
             }
         }
         
@@ -149,7 +149,7 @@ internal extension PacketType {
         case .response(.cmdLogging):
             fatalError("Not implemented")
         default:
-            throw OTAPError.cannotCreatePacket
+            throw OTAPPacketError.cannotCreatePacket
         }
     }
 }

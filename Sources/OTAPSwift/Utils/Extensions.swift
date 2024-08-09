@@ -14,32 +14,6 @@ extension Data {
 
 //MARK: -
 
-internal final class ThrowingEmitter<Value: Sendable, Failure: Error>: Sendable {
-    
-    typealias Stream = AsyncThrowingStream<Value, Error>
-    
-    let stream: Stream
-    private let continuation: Stream.Continuation
-    
-    init() {
-        (stream, continuation) = Stream.makeStream()
-    }
-    
-    func emit(_ value: Value) {
-        continuation.yield(value)
-    }
-    
-    func finish(throwing error: Failure) {
-        continuation.finish(throwing: error)
-    }
-    
-    func finish() {
-        continuation.finish()
-    }
-}
-
-//MARK: -
-
 extension Task where Failure == Error {
     
     static func delayed(for duration: Duration,
@@ -49,6 +23,27 @@ extension Task where Failure == Error {
         Task(priority: priority) {
             try await Task<Never, Never>.sleep(for: duration, tolerance: .zero)
             return try await operation()
+        }
+    }
+}
+
+//MARK: -
+
+extension AsyncThrowingStream {
+
+    /// Allows to build the stream with async build closure
+    public init(_ elementType: Element.Type = Element.self,
+                bufferingPolicy limit: AsyncThrowingStream<Element, Failure>.Continuation.BufferingPolicy = .unbounded,
+                _ build: @Sendable @escaping (AsyncThrowingStream<Element, Failure>.Continuation) async -> Void
+    ) where Failure == Error {
+        self = AsyncThrowingStream(elementType, bufferingPolicy: limit) { continuation in
+            let task = Task {
+                await build(continuation)
+            }
+            
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
         }
     }
 }

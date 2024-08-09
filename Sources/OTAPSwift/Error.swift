@@ -1,28 +1,28 @@
 
-public enum OTAPError: Error {
+public enum OTAPConnectionError: Error {
+    case missingMessageContext,
+         messageNotComplete,
+         missingPacketHeader,
+         cannotCreateMessage
+}
 
+public enum OTAPPacketError: Error {
     case exceededMTUSize,
          expectedMoreData,
          malformedPayload,
-         unknownPacketType,
-         invalidPacketType,
-         missingPacketHeader,
-         cannotCreatePacket,
-         unexpectedPayloadLength,
-         missingMessageContext,
-         messageNotComplete,
-         cannotCreateMessage,
-         alreadyConnected,
-         notConnected,
+         cannotCreatePacket
+}
+
+public enum OTAPClientError: Error {
+    case notConnected,
          notAuthenticated,
          unsupportedProtocolVersion,
+         unexpectedServerResponse,
+         updateFrequencyNotAllowed,
          serverError(NetworkError)
 }
 
-//MARK: -
-
 public enum NetworkError: UInt8, Error {
-
     case general,
          notAuthorized = 6,
          notExpected,

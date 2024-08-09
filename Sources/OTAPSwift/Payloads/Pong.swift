@@ -9,7 +9,7 @@ public struct Pong: ReadablePayload {
     
     public init(data: Data) throws {
         guard data.count == 4 else {
-            throw OTAPError.malformedPayload
+            throw OTAPPacketError.malformedPayload
         }
         
         self.reader = Reader(data: data)

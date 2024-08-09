@@ -10,7 +10,7 @@ public struct Welcome: ReadablePayload {
     
     public init(data: Data) throws {
         guard data.count >= 0 else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         
         self.reader = Reader(data: data)

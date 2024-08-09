@@ -9,7 +9,7 @@ public struct ServerError: ReadablePayload {
     
     public init(data: Data) throws {
         guard data.count == 1 else {
-            throw OTAPError.malformedPayload
+            throw OTAPPacketError.malformedPayload
         }
         
         self.reader = Reader(data: data)

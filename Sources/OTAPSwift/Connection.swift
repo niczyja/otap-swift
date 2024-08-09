@@ -7,23 +7,25 @@ public actor OTAPConnection {
     public static let defaultPort: UInt16 = 3977
     public static let authenticationTimeout: UInt8 = 10
 
-    public var state: AsyncThrowingStream<NWConnection.State, Error> {
-        stateEmitter.stream
-    }
-    
-    public var packets: AsyncThrowingStream<Packet, Error> {
-        packetsEmitter.stream
-    }
+    public typealias StateStream = AsyncThrowingStream<NWConnection.State, Error>
+    public typealias PacketStream = AsyncThrowingStream<Packet, Error>
+
+    public let stateSequence: AsyncSharedSequence<StateStream>
+    public let packetSequence: AsyncSharedSequence<PacketStream>
     
     private let endpoint: NWEndpoint
     private let connection: NWConnection
-    private let stateEmitter = ThrowingEmitter<NWConnection.State, Error>()
-    private let packetsEmitter = ThrowingEmitter<Packet, Error>()
+    private let stateStream: (stream: StateStream, continuation: StateStream.Continuation)
+    private let packetStream: (stream: PacketStream, continuation: PacketStream.Continuation)
     
     public init(endpoint: NWEndpoint) {
         self.endpoint = endpoint
         self.connection = NWConnection(to: self.endpoint, using: .otap)
-
+        self.stateStream = StateStream.makeStream()
+        self.packetStream = PacketStream.makeStream()
+        self.stateSequence = AsyncSharedSequence(self.stateStream.stream)
+        self.packetSequence = AsyncSharedSequence(self.packetStream.stream)
+        
         OTAPConnection.logger.info("Created connection to '\(endpoint)'.")
     }
     
@@ -38,6 +40,8 @@ public actor OTAPConnection {
     public func close() {
         connection.cancel()
         connection.stateUpdateHandler = nil
+        stateStream.continuation.finish()
+        packetStream.continuation.finish()
         
         OTAPConnection.logger.info("Connection closed.")
     }
@@ -68,15 +72,15 @@ extension OTAPConnection {
             
             switch newState {
             case .cancelled:
-                self.stateEmitter.finish()
+                self.stateStream.continuation.finish()
             case .failed(let error):
-                self.stateEmitter.finish(throwing: error)
+                self.stateStream.continuation.finish(throwing: error)
             case .waiting(let reason):
                 OTAPConnection.logger.warn("Connection is waiting with reason: \(reason.localizedDescription). Restarting...")
-                self.stateEmitter.emit(newState)
                 self.connection.restart()
+                self.stateStream.continuation.yield(newState)
             default:
-                self.stateEmitter.emit(newState)
+                self.stateStream.continuation.yield(newState)
             }
         }
         
@@ -88,39 +92,38 @@ extension OTAPConnection {
             OTAPConnection.logger.info("Received message with: \(String(describing: content)), \(String(describing: context)), \(isComplete), \(String(describing: error))")
             
             if let error {
-                OTAPConnection.logger.error("Received message with error: \(error.localizedDescription).")
-                self.packetsEmitter.finish(throwing: error)
+                self.packetStream.continuation.finish(throwing: error)
                 return
             }
             guard let context else {
-                self.packetsEmitter.finish(throwing: OTAPError.missingMessageContext)
+                self.packetStream.continuation.finish(throwing: OTAPConnectionError.missingMessageContext)
                 return
             }
             guard isComplete else {
-                self.packetsEmitter.finish(throwing: OTAPError.messageNotComplete)
+                self.packetStream.continuation.finish(throwing: OTAPConnectionError.messageNotComplete)
                 return
             }
             guard !context.isFinal else {
-                self.packetsEmitter.finish()
+                self.packetStream.continuation.finish()
                 return
             }
             guard let message = context.protocolMetadata(definition: OTAP.definition) as? NWProtocolFramer.Message else {
-                self.packetsEmitter.finish(throwing: OTAPError.cannotCreateMessage)
+                self.packetStream.continuation.finish(throwing: OTAPConnectionError.cannotCreateMessage)
                 return
             }
             guard let response = message.packetHeader?.packetType else {
-                self.packetsEmitter.finish(throwing: OTAPError.invalidPacketType)
+                self.packetStream.continuation.finish(throwing: OTAPConnectionError.missingPacketHeader)
                 return
             }
             
             do {
                 let packet = try response.packet(with: content)
-                self.packetsEmitter.emit(packet)
+                self.packetStream.continuation.yield(packet)
                 Task {
                     await self.receiveNextMessage()
                 }
             } catch {
-                self.packetsEmitter.finish(throwing: error)
+                self.packetStream.continuation.finish(throwing: error)
             }
         }
 

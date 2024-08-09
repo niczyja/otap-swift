@@ -17,7 +17,6 @@ public class OTAPClient {
     @Published public private(set) var gameServer: GameServer?
     
     private var connection: OTAPConnection?
-    private var authenticationTimer: Task<Void, Error>?
 
     public convenience init?(name: String, IPv4: String, port: UInt16 = OTAPConnection.defaultPort) {
         guard let address = IPv4Address(IPv4) else { return nil }
@@ -47,28 +46,20 @@ public class OTAPClient {
 
 //MARK: -
 
-public extension OTAPClient {
+extension OTAPClient {
     
     func connect() async throws {
-        guard connection == nil else {
-            throw OTAPError.alreadyConnected
-        }
+        guard connection == nil, state == .disconnected else { return }
         
         connection = OTAPConnection(endpoint: endpoint)
+        let connectionState = connection!.stateSequence.shared()
         state = .connecting
         await connection!.start()
+
+        //TODO: refactor. this is asking for hang with no way to cancel
+        guard try await connectionState.contains(.ready) else { throw OTAPClientError.notConnected }
         
-        for try await state in await connection!.state {
-            if case .ready = state {
-                self.state = .connected
-                break
-            }
-        }
-        
-        authenticationTimer = Task.delayed(for: .seconds(OTAPConnection.authenticationTimeout), priority: .utility) {
-            OTAPClient.logger.error("Authentication timeout, disconnecting...")
-            await self.disconnect()
-        }
+        self.state = .connected
         
         OTAPClient.logger.info("Client '\(name)' connected.")
     }
@@ -77,42 +68,43 @@ public extension OTAPClient {
         state = .disconnected
         await connection?.close()
         connection = nil
-        authenticationTimer = nil
         
         OTAPClient.logger.info("Client '\(name)' disconnected.")
     }
+}
+
+//MARK: -
+
+public extension OTAPClient {
     
     func join(password: String) async throws {
-        OTAPClient.logger.info("Authenticating...")
+        guard state != .authenticated else { return }
         
-        authenticationTimer?.cancel()
-        guard let connection, state == .connected else {
-            throw OTAPError.notConnected
-        }
+        try await connect()
+        guard let connection, state == .connected else { throw OTAPClientError.notConnected }
         
         let packet = try PacketType.request(.join).packet(with: Join(name: name, password: password, version: Self.version))
+        let expected = connection.packetSequence.shared().filter { [.response(.protocolVersion), .response(.welcome)].contains($0.header.packetType) }
         try await connection.send(packet)
         
         var protocolVersion: UInt8?
         var serverUpdates: GameServer.Updates?
         
-        for try await packet in await connection.packets {
-            if case .response(.protocolVersion) = packet.header.packetType {
-                guard let payload = packet.payload as? ProtocolVersion, payload.version <= OTAP.version else {
+        for try await response in expected {
+            if case .response(.protocolVersion) = response.header.packetType {
+                guard let payload = response.payload as? ProtocolVersion, payload.version <= OTAP.version else {
                     await disconnect()
-                    throw OTAPError.unsupportedProtocolVersion
+                    throw OTAPClientError.unsupportedProtocolVersion
                 }
                 
                 protocolVersion = payload.version
                 serverUpdates = payload.updates
-                
                 continue
             }
-            
-            if case .response(.welcome) = packet.header.packetType {
-                guard let payload = packet.payload as? Welcome, let protocolVersion, let serverUpdates else {
+            if case .response(.welcome) = response.header.packetType {
+                guard let payload = response.payload as? Welcome, let protocolVersion, let serverUpdates else {
                     await disconnect()
-                    throw OTAPError.invalidPacketType
+                    throw OTAPClientError.unexpectedServerResponse
                 }
                 
                 state = .authenticated
@@ -122,59 +114,46 @@ public extension OTAPClient {
                                              info: payload.serverInfo,
                                              map: payload.serverMap,
                                              updates: serverUpdates)
-                
                 return
             }
-            
-            // I didn't observe this to happen. Theoretically server sends error packet, but also closes connection immediately.
-            if case .response(.error) = packet.header.packetType {
-                let error = OTAPError.serverError((packet.payload as! ServerError).error)
-                OTAPClient.logger.error("Server returned an error: \(error)")
-                await disconnect()
-                throw error
-            }
-            
             break
         }
         
-        // Because we don't get exact error type from server I think it's useful to assume here that it was an authentication error
         OTAPClient.logger.error("Wrong password.")
         await disconnect()
-        throw OTAPError.serverError(.wrongPassword)
+        throw OTAPClientError.serverError(.wrongPassword)
     }
     
     func quit() async throws {
-        OTAPClient.logger.info("About to quit")
-        
-        guard let connection, state != .disconnected else {
-            throw OTAPError.notConnected
-        }
-        
+        guard let connection, state != .disconnected else { return }
+
         try await connection.send(try PacketType.request(.quit).packet())
         await disconnect()
+
+        OTAPClient.logger.info("Client '\(name)' disconnected.")
     }
+}
+
+// MARK: -
+
+public extension OTAPClient {
     
     func ping() async throws -> Bool {
-        OTAPClient.logger.info("Ping")
-        
-        guard let connection else { throw OTAPError.notConnected }
-        guard state == .authenticated else { throw OTAPError.notAuthenticated }
+        guard let connection, state == .authenticated else { throw OTAPClientError.notAuthenticated }
         
         let identifier = UInt32.random(in: 0...UInt32.max)
         let packet = try PacketType.request(.ping).packet(with: Ping(id: identifier))
+        let expected = connection.packetSequence.shared().filter { $0.header.packetType == .response(.pong) }
         try await connection.send(packet)
-        
-        for try await packet in await connection.packets {
-            if case .response(.pong) = packet.header.packetType {
-                return (packet.payload as! Pong).id == identifier
-            }
-            if case .response(.error) = packet.header.packetType {
-                throw OTAPError.serverError((packet.payload as! ServerError).error)
+
+        for try await response in expected {
+            if case .response(.pong) = response.header.packetType {
+                return (response.payload as! Pong).id == identifier
             }
             break
         }
+        return false
         
-        throw OTAPError.invalidPacketType
     }
 }
 

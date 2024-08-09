@@ -5,7 +5,7 @@ public struct GameServer {
     public let protocolVersion: UInt8       ///< version of admin protocol supported by server
     public let info: Info                   ///< basic info about game server
     public let map: Map                     ///< map information
-    public let updates: Updates             ///< frequencies for each type of update
+    public var updates: Updates             ///< frequencies for each type of update
 }
 
 //MARK: -

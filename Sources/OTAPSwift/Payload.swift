@@ -55,28 +55,28 @@ public struct Reader {
     
     internal func readByte() throws -> UInt8 {
         guard canRead(numBytes: MemoryLayout<UInt8>.size) else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         return reader.byte()
     }
     
     internal func readUInt16() throws -> UInt16 {
         guard canRead(numBytes: MemoryLayout<UInt16>.size) else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         return reader.uint16()
     }
     
     internal func readUInt32() throws -> UInt32 {
         guard canRead(numBytes: MemoryLayout<UInt32>.size) else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         return reader.uint32()
     }
     
     internal func readUInt64() throws -> UInt64 {
         guard canRead(numBytes: MemoryLayout<UInt64>.size) else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         return reader.uint64()
     }

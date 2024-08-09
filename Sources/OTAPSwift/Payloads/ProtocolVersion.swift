@@ -10,7 +10,7 @@ public struct ProtocolVersion: ReadablePayload {
     
     public init(data: Data) throws {
         guard data.count >= 1 else {
-            throw OTAPError.expectedMoreData
+            throw OTAPPacketError.expectedMoreData
         }
         
         self.reader = Reader(data: data)
@@ -18,7 +18,7 @@ public struct ProtocolVersion: ReadablePayload {
         
         while (try self.reader.readBool()) {
             guard let updateType = GameServer.Update(rawValue: try self.reader.readUInt16()) else {
-                throw OTAPError.malformedPayload
+                throw OTAPPacketError.malformedPayload
             }
 
             updates[updateType] = GameServer.Update.Frequency(rawValue: try self.reader.readUInt16())
