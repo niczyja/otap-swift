@@ -6,6 +6,7 @@ public actor OTAPConnection {
     
     public static let defaultPort: UInt16 = 3977
     public static let authenticationTimeout: UInt8 = 10
+    public static let retryTimeout: Duration = .seconds(3)
 
     public typealias StateStream = AsyncThrowingStream<NWConnection.State, Error>
     public typealias PacketStream = AsyncThrowingStream<Packet, Error>
@@ -77,8 +78,13 @@ extension OTAPConnection {
                 self.stateStream.continuation.finish(throwing: error)
             case .waiting(let reason):
                 OTAPConnection.logger.warn("Connection is waiting with reason: \(reason.localizedDescription). Restarting...")
-                self.connection.restart()
                 self.stateStream.continuation.yield(newState)
+                Task {
+                    try? await Task.sleep(for: Self.retryTimeout)
+                    if case .waiting(_) = self.connection.state {
+                        self.connection.restart()
+                    }
+                }
             default:
                 self.stateStream.continuation.yield(newState)
             }
