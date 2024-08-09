@@ -153,7 +153,17 @@ public extension OTAPClient {
             break
         }
         return false
+    }
+    
+    func set(update frequency: GameServer.Update.Frequency, for updateType: GameServer.Update) async throws {
+        guard let connection, state == .authenticated else { throw OTAPClientError.notAuthenticated }
+        guard updateType.allowedFrequencies.contains(frequency) else { throw OTAPClientError.updateFrequencyNotAllowed }
         
+        let payload = UpdateFrequency(update: updateType, frequency: frequency)
+        let packet = try PacketType.request(.updateFrequency).packet(with: payload)
+        try await connection.send(packet)
+
+        self.gameServer?.updates[updateType] = frequency
     }
 }
 
