@@ -19,6 +19,7 @@ public enum OTAPClientError: Error {
          unsupportedProtocolVersion,
          unexpectedServerResponse,
          updateFrequencyNotAllowed,
+         updateTypeNotAllowed,
          serverError(NetworkError)
 }
 

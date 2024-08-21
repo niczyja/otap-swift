@@ -15,6 +15,7 @@ public class OTAPClient {
     
     @Published public private(set) var state: State = .disconnected
     @Published public private(set) var gameServer: GameServer?
+    @Published public private(set) var gameState: GameState?
     
     private var connection: OTAPConnection?
 
@@ -59,7 +60,7 @@ extension OTAPClient {
         //TODO: refactor. this is asking for hang with no way to cancel
         guard try await connectionState.contains(.ready) else { throw OTAPClientError.notConnected }
         
-        self.state = .connected
+        state = .connected
         
         OTAPClient.logger.info("Client '\(name)' connected.")
     }
@@ -110,10 +111,11 @@ public extension OTAPClient {
                 state = .authenticated
                 OTAPClient.logger.info("Client '\(name)' authenticated.")
                 
-                self.gameServer = GameServer(protocolVersion: protocolVersion,
-                                             info: payload.serverInfo,
-                                             map: payload.serverMap,
-                                             updates: serverUpdates)
+                gameServer = GameServer(protocolVersion: protocolVersion,
+                                        info: payload.serverInfo,
+                                        map: payload.serverMap,
+                                        updates: serverUpdates)
+                gameState = GameState()
                 return
             }
             break
@@ -163,7 +165,25 @@ public extension OTAPClient {
         let packet = try PacketType.request(.updateFrequency).packet(with: payload)
         try await connection.send(packet)
 
-        self.gameServer?.updates[update] = frequency
+        gameServer?.updates[update] = frequency
+    }
+    
+    //TODO: support other update types later on
+    func poll(for update: GameServer.Update) async throws {
+        guard let connection, state == .authenticated else { throw OTAPClientError.notAuthenticated }
+        guard update == .date else { throw OTAPClientError.updateTypeNotAllowed }
+        
+        let payload = Poll(update: update)
+        let packet = try PacketType.request(.poll).packet(with: payload)
+        let expected = connection.packetSequence.shared().filter { $0.header.packetType == .response(.date) }
+        try await connection.send(packet)
+        
+        for try await response in expected {
+            if case .response(.date) = response.header.packetType {
+                gameState?.date = GameDate(rawValue: (response.payload as! DateResponse).rawDate)
+            }
+            break
+        }
     }
 }
 

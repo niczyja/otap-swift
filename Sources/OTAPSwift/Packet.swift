@@ -107,7 +107,7 @@ internal extension PacketType {
         case .response(.welcome):
             return try Packet(type: self, payload: Welcome(data: data))
         case .response(.date):
-            fatalError("Not implemented")
+            return try Packet(type: self, payload: DateResponse(data: data))
         case .response(.clientJoin):
             fatalError("Not implemented")
         case .response(.clientInfo):

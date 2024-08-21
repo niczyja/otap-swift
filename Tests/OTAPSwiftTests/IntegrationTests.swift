@@ -131,6 +131,26 @@ final class IntegrationTests: XCTestCase {
         XCTAssertEqual(client.state, .disconnected)
     }
     
+    func testPollDate() async throws {
+        let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
+
+        try await client.connect()
+        XCTAssertEqual(client.state, .connected)
+
+        try await client.join(password: Self.password)
+        XCTAssertEqual(client.state, .authenticated)
+
+        var gameState: GameState? = nil
+        let sub = client.$gameState.sink { gameState = $0 }
+        
+        try await client.poll(for: .date)
+        XCTAssertNotNil(gameState?.date)
+
+        try await client.quit()
+        XCTAssertEqual(client.state, .disconnected)
+        sub.cancel()
+    }
+    
     func testQuit() async throws {
         let client = OTAPClient(name: Self.clientName, IPv4: Self.IPAddress)!
 
